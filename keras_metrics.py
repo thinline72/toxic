@@ -30,7 +30,6 @@ def auc_keras(y_true, y_pred):
 
 def u_statistic_loss(y_true,y_pred):
     with tf.name_scope("u_statistic_loss"):
-
         pos = tf.boolean_mask(y_pred, tf.cast(y_true, tf.bool))
         neg = tf.boolean_mask(y_pred, ~tf.cast(y_true, tf.bool))
         pos = tf.expand_dims(pos, 0)
@@ -60,12 +59,15 @@ def SVMrank_loss(y_true, y_pred):
     y_neg = parts[0]
     y_pos = tf.expand_dims(y_pos, 0)
     y_neg = tf.expand_dims(y_neg, -1)
-    rank_hinge_loss = K.mean(K.relu(margin - y_neg - y_pos))
-    return rank_hinge_loss
+    return K.mean(K.relu(margin - y_neg - y_pos))
 
 
 ###########experimental losses##############
 
 def exp_loss(y_true, y_pred):
     loss = u_statistic_loss(y_true,y_pred) + SoftAUC_loss(y_true, y_pred)
+    return loss
+
+def art_loss(y_true, y_pred):
+    loss = u_statistic_loss(y_true,y_pred) + SVMrank_loss(y_true, y_pred)
     return loss
