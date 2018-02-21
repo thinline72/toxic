@@ -40,11 +40,13 @@ def getBiCuDNNGRUHowardModel(input_shape, classes, num_words, emb_size, emb_matr
     emb = Embedding(num_words, emb_size, weights=[emb_matrix], trainable=emb_trainable, name='embs')(x_input)
     emb = SpatialDropout1D(0.3)(emb)
         
-    rnn = Bidirectional(CuDNNGRU(100, return_sequences=True))(emb)
+    rnn_forw, rnn_last_forw = CuDNNGRU(100, return_sequences=True, return_state=True)(emb)
+    rnn_back, rnn_last_back = CuDNNGRU(100, return_sequences=True, return_state=True, go_backwards=True)(emb)
     
-    rnn_last = Reshape((128,))(crop(1, -2, -1)(rnn))
+    rnn = concatenate([rnn_forw, rnn_back])
     rnn_max = GlobalMaxPool1D()(rnn)
     rnn_avg = GlobalAvgPool1D()(rnn)
+    rnn_last = concatenate([rnn_last_forw, rnn_last_back])
     
     x = concatenate([rnn_last, rnn_max, rnn_avg])
     x = Dropout(0.3)(x)
