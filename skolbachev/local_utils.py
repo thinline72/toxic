@@ -13,6 +13,7 @@ from keras import backend as K
 import toxic
 from toxic.callbacks import *
 from toxic.losses import *
+from toxic.metrics import *
 from toxic.models import *
 from toxic.text_analyzer import *
 from toxic.utils.data_utils import *

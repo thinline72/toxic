@@ -63,28 +63,26 @@ def train_kfold_emb_models(model_fun, model_name, embs_name, stratified_batches,
 
         # Callbacks
         model_checkpoint = ModelCheckpoint(model_file, monitor='val_loss', mode='min', verbose=1, save_best_only=True)
-        lr_schedule = LearningRateScheduler(lr_change, verbose=1)
-        lr_reduce = ReduceLROnPlateau(monitor='val_loss', factor=0.9, patience=1, min_lr=0.0001, verbose=1)
+        clr = CyclicLR()
         early_stop = EarlyStopping(monitor='val_loss', min_delta=0, patience=4, verbose=1, mode='auto')
-        roc_auc_callback = ROCAUCCallback(X[val_folds[f_inx]], Y[val_folds[f_inx]], 1024)
+        roc_auc_eval = RocAucEvaluation(X[val_folds[f_inx]], Y[val_folds[f_inx]], batch_size=1024)
 
         print("Training "+model_name+" using "+embs_name+" embeddings...")
         weights = getClassWeights(Y)
-        model.compile(loss='binary_crossentropy', optimizer=optimizers.RMSprop(0.001, clipvalue=1., clipnorm=1.))
+        model.compile(loss=art_loss, optimizer=optimizers.RMSprop(clipvalue=1., clipnorm=1.))
         model.fit_generator(
             generator=trn_seq, steps_per_epoch=len(trn_seq),
             validation_data=val_seq, validation_steps=len(val_seq),
             initial_epoch=0, epochs=epochs, shuffle=False, verbose=2,
             class_weight=weights,
-            callbacks=[model_checkpoint, roc_auc_callback, early_stop, lr_reduce],
+            callbacks=[model_checkpoint, clr, early_stop, roc_auc_eval],
             use_multiprocessing=False, workers=cpu_cores, max_queue_size=8*cpu_cores)
             
         print("Predicting...")
         del model
         model = load_model(model_file, compile=True, 
-                           custom_objects={'focal_loss':focal_loss, 'roc_auc_loss':roc_auc_loss, 
-                                           'AttentionWeightedAverage':AttentionWeightedAverage,
-                                           'Attention':Attention})
+                           custom_objects={'Attention':Attention, 'art_loss':art_loss,
+                                           'AttentionWeightedAverage':AttentionWeightedAverage})
         
         pred[val_folds[f_inx]] = model.predict(X[val_folds[f_inx]], batch_size=1024, verbose=0)
         test_pred[f_inx] = model.predict(test_X, batch_size=1024, verbose=0)
