@@ -15,6 +15,7 @@ def blending_auc(list_of_arrays,list_of_weights):
     return final
     
 def blending_submissions(list_of_subm,list_of_weights,filename='blending.csv'):
+    assert len(list_of_subm)==len(list_of_weights),'Something went wrong'
     final = list_of_subm[0].copy()
     label_cols = ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']
     for label in label_cols:
