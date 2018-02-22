@@ -10,7 +10,7 @@ import tensorflow as tf
 num_filters = [64,128,256,512] # from VDCNN paper
 
 
-def build_model(input_shape,num_filters,num_classes,num_words,emb_size,emb_matrix,top_k=8,emb_trainable=False):
+def VDCNN_model(input_shape,num_filters,num_classes,num_words,emb_size,emb_matrix,top_k=8,emb_trainable=False):
 
     inputs = Input(shape=(input_shape, ), dtype='int32', name='inputs')
 
