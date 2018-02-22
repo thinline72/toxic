@@ -1,9 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Thu Feb 22 00:36:38 2018
-
-@author: Arthur Stsepanenka
-"""
 from scipy.stats import rankdata
 import numpy as np
 import pandas as pd
