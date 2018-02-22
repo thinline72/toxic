@@ -10,7 +10,7 @@ import tensorflow as tf
 num_filters = [64,128,256,512] # from VDCNN paper
 
 
-def build_model(input_shape,num_filters,num_classes,num_words,emb_size,emb_matrix,top_k=8,emb_trainable=False,model_optimizer='nadam',model_loss='binary_crossentropy'):
+def build_model(input_shape,num_filters,num_classes,num_words,emb_size,emb_matrix,top_k=8,emb_trainable=False):
 
     inputs = Input(shape=(input_shape, ), dtype='int32', name='inputs')
 
@@ -35,5 +35,4 @@ def build_model(input_shape,num_filters,num_classes,num_words,emb_size,emb_matri
     fc3 = Dense(num_classes, activation='sigmoid')(fc2)
 
     model = Model(inputs=inputs, outputs=fc3)
-    model.compile(optimizer=model_optimizer, loss=model_loss, metrics=['accuracy',auc_keras])
     return model
