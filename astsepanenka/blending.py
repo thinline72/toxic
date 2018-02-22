@@ -14,7 +14,7 @@ def blending_auc(list_of_arrays,list_of_weights):
         final = final + list_of_weights[element]*rankdata(list_of_arrays[element])
     return final
     
-def blending_submission(list_of_subm,list_of_weights,filename='blending.csv'):
+def blending_submissions(list_of_subm,list_of_weights,filename='blending.csv'):
     final = list_of_subm[0].copy()
     label_cols = ['toxic', 'severe_toxic', 'obscene', 'threat', 'insult', 'identity_hate']
     for label in label_cols:
