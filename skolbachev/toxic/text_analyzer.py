@@ -1,19 +1,17 @@
 from __future__ import absolute_import
 
+import collections
 import numpy as np
-import nltk
 from joblib import Parallel, delayed
 from keras.preprocessing.sequence import pad_sequences
 
-
-def tokenize(text):
-    return [nltk.stem.WordNetLemmatizer().lemmatize(token) 
-            for token in nltk.tokenize.TweetTokenizer(False, False, False).tokenize(text)]
-
 class TextAnalyzer(object):
     
-    def __init__(self, word2inx, vectors, max_len, min_word_hits=1, min_doc_hits=1, max_doc_freq=1.0,
-                 process_oov_words=False, oov_window=7, oov_min_doc_hits=1, cpu_cores=8):
+    def __init__(self, tokenize_fun, word2inx, vectors, max_len, 
+                 min_word_hits=1, min_doc_hits=1, max_doc_freq=1.0,
+                 process_oov_words=False, oov_window=7, oov_min_doc_hits=1, 
+                 cpu_cores=8):
+        self.tokenize_fun = tokenize_fun
         self.word2inx = word2inx
         self.vectors = vectors
         
@@ -26,8 +24,8 @@ class TextAnalyzer(object):
         self.unk_vec = np.zeros(self.emb_size)
         
         self.doc_counts = 0
-        self.word_hits = {}
-        self.doc_hits = {}
+        self.word_hits = collections.OrderedDict()
+        self.doc_hits = collections.OrderedDict()
         
         self.min_word_hits = min_word_hits
         self.min_doc_hits = min_doc_hits
@@ -36,12 +34,12 @@ class TextAnalyzer(object):
         self.process_oov_words = process_oov_words
         self.oov_window = oov_window
         self.oov_min_doc_hits = oov_min_doc_hits
-        self._oov_vec = {}
-        self._oov_vec_sum = {}
+        self._oov_vec = collections.OrderedDict()
+        self._oov_vec_sum = collections.OrderedDict()
 
         self.inx2emb = [self.PAD_TOKEN, self.UNK_TOKEN]
         self.emb_vectors = [self.pad_vec, self.unk_vec]
-        self._embs = {}
+        self._embs = collections.OrderedDict()
         self.cpu_cores = cpu_cores
            
     def fit_on_texts(self, texts):
@@ -49,7 +47,7 @@ class TextAnalyzer(object):
         doc_ulen = []
         docs_seq = []
         
-        docs = Parallel(n_jobs=self.cpu_cores)(delayed(tokenize)(text) for text in texts)
+        docs = Parallel(n_jobs=self.cpu_cores)(delayed(self.tokenize_fun)(text) for text in texts)
         self.doc_counts = len(docs)
         
         for doc in docs:
@@ -107,7 +105,7 @@ class TextAnalyzer(object):
         doc_ulen = []
         docs_seq = []
 
-        docs = Parallel(n_jobs=self.cpu_cores)(delayed(tokenize)(text) for text in texts)
+        docs = Parallel(n_jobs=self.cpu_cores)(delayed(self.tokenize_fun)(text) for text in texts)
         for doc in docs:
             doc_len.append(len(doc))
             doc_ulen.append(len(set(doc)))

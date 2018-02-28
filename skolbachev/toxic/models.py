@@ -8,13 +8,13 @@ from keras.regularizers import *
 
 from .attentions import *
 
-def getBiCuDNNGRUx2Model(input_shape, classes, num_words, emb_size, emb_matrix,
-                         attention=0, dense=False, emb_trainable=False):
+def getModel0(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout=0.5,
+              attention=0, dense=False, emb_trainable=False):
 
     x_input = Input(shape=(input_shape,))
     
     emb = Embedding(num_words, emb_size, weights=[emb_matrix], trainable=emb_trainable, name='embs')(x_input)
-    emb = SpatialDropout1D(0.3)(emb)
+    emb = SpatialDropout1D(emb_dropout)(emb)
         
     rnn1 = Bidirectional(CuDNNGRU(64, return_sequences=True))(emb)
     rnn2 = Bidirectional(CuDNNGRU(64, return_sequences=True))(rnn1)
@@ -23,7 +23,6 @@ def getBiCuDNNGRUx2Model(input_shape, classes, num_words, emb_size, emb_matrix,
     if attention == 1: x = AttentionWeightedAverage()(x)
     elif attention == 2: x = Attention()(x)
     else: x = GlobalMaxPooling1D()(x)
-    x = Dropout(0.3)(x)
     
     if dense: 
         x = Dense(32, activation='relu')(x)
@@ -32,24 +31,67 @@ def getBiCuDNNGRUx2Model(input_shape, classes, num_words, emb_size, emb_matrix,
     x_output = Dense(classes, activation='sigmoid')(x)
     return Model(inputs=x_input, outputs=x_output)
 
-def getBiCuDNNGRUHowardModel(input_shape, classes, num_words, emb_size, emb_matrix,
-                             attention=0, dense=False, emb_trainable=False):
+def getModel1(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout=0.5,
+              attention=0, dense=False, emb_trainable=False):
 
     x_input = Input(shape=(input_shape,))
     
     emb = Embedding(num_words, emb_size, weights=[emb_matrix], trainable=emb_trainable, name='embs')(x_input)
-    emb = SpatialDropout1D(0.3)(emb)
+    emb = SpatialDropout1D(emb_dropout)(emb)
         
-    rnn_forw, rnn_last_forw = CuDNNGRU(100, return_sequences=True, return_state=True)(emb)
-    rnn_back, rnn_last_back = CuDNNGRU(100, return_sequences=True, return_state=True, go_backwards=True)(emb)
+    rnn, rnn_fw, rnn_bw = Bidirectional(CuDNNGRU(100, return_sequences=True, return_state=True))(emb)
     
-    rnn = concatenate([rnn_forw, rnn_back])
     rnn_max = GlobalMaxPool1D()(rnn)
     rnn_avg = GlobalAvgPool1D()(rnn)
-    rnn_last = concatenate([rnn_last_forw, rnn_last_back])
+    rnn_last = concatenate([rnn_fw, rnn_bw])
     
-    x = concatenate([rnn_last, rnn_max, rnn_avg])
-    x = Dropout(0.3)(x)
+    x = concatenate([rnn_max, rnn_avg, rnn_last])
+    
+    if dense: 
+        x = Dense(32, activation='relu')(x)
+        x = Dropout(0.3)(x)
+    
+    x_output = Dense(classes, activation='sigmoid')(x)
+    return Model(inputs=x_input, outputs=x_output)
+
+def getModel2(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout=0.5,
+                attention=0, dense=False, emb_trainable=False):
+
+    x_input = Input(shape=(input_shape,))
+    
+    emb = Embedding(num_words, emb_size, weights=[emb_matrix], trainable=emb_trainable, name='embs')(x_input)
+    emb = SpatialDropout1D(emb_dropout)(emb)
+        
+    rnn = Bidirectional(CuDNNGRU(75, return_sequences=True))(emb)
+    
+    cnn1 = Conv1D(filters=50, kernel_size=3, activation='relu', padding='same')(rnn)
+    cnn2 = Conv1D(filters=50, kernel_size=4, activation='relu', padding='same')(rnn)
+    cnn3 = Conv1D(filters=50, kernel_size=5, activation='relu', padding='same')(rnn)
+    
+    x = concatenate([rnn, cnn1, cnn2, cnn3])
+    
+    if attention == 1: x = AttentionWeightedAverage()(x)
+    elif attention == 2: x = Attention()(x)
+    else: x = GlobalMaxPooling1D()(x)
+    
+    if dense: 
+        x = Dense(32, activation='relu')(x)
+        x = Dropout(0.3)(x)
+    
+    x_output = Dense(classes, activation='sigmoid')(x)
+    return Model(inputs=x_input, outputs=x_output)
+
+def getModel3(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout=0.5,
+              attention=0, dense=False, emb_trainable=False):
+
+    x_input = Input(shape=(input_shape,))
+    
+    emb = Embedding(num_words, emb_size, weights=[emb_matrix], trainable=emb_trainable, name='embs')(x_input)
+    emb = SpatialDropout1D(emb_dropout)(emb)
+    
+    rnn1 = Bidirectional(CuDNNGRU(64, return_sequences=True))(emb)
+    rnn2 = Bidirectional(CuDNNGRU(64, return_sequences=False))(rnn1)
+    x = rnn2
     
     if dense: 
         x = Dense(32, activation='relu')(x)

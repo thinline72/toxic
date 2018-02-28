@@ -28,6 +28,14 @@ def load_npy(folder, name, shape):
         return np.zeros(shape)
     
 def load_embs(embs_dir='/src/DL/commons/word_embeddings/', embs_name='crawl-300d-2M'):
+    '''
+    Load embeddings from bcolz (vectors) and pkl (words) fromat.
+    Available embs_names:
+        - crawl-300d-2M
+        - glove-300d-840B
+        - glove-50d-6B
+        - glove-twitter-200d-27B
+    '''
     vecs_path = embs_dir+embs_name+'-vectors.bcolz'
     words_path = embs_dir+embs_name+'-words.pkl'
     
