@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import multiprocessing
 import collections
 import numpy as np
 from joblib import Parallel, delayed
@@ -7,11 +8,9 @@ from keras.preprocessing.sequence import pad_sequences
 
 class TextAnalyzer(object):
     
-    def __init__(self, tokenize_fun, word2inx, vectors, max_len, 
+    def __init__(self, word2inx, vectors, max_len, 
                  min_word_hits=1, min_doc_hits=1, max_doc_freq=1.0,
-                 process_oov_words=False, oov_window=7, oov_min_doc_hits=1, 
-                 cpu_cores=8):
-        self.tokenize_fun = tokenize_fun
+                 process_oov_words=False, oov_window=5, oov_min_doc_hits=1):
         self.word2inx = word2inx
         self.vectors = vectors
         
@@ -40,14 +39,12 @@ class TextAnalyzer(object):
         self.inx2emb = [self.PAD_TOKEN, self.UNK_TOKEN]
         self.emb_vectors = [self.pad_vec, self.unk_vec]
         self._embs = collections.OrderedDict()
-        self.cpu_cores = cpu_cores
-           
-    def fit_on_texts(self, texts):
+    
+    def fit_on_docs(self, docs):
         doc_len = []
         doc_ulen = []
         docs_seq = []
         
-        docs = Parallel(n_jobs=self.cpu_cores)(delayed(self.tokenize_fun)(text) for text in texts)
         self.doc_counts = len(docs)
         
         for doc in docs:
@@ -100,12 +97,11 @@ class TextAnalyzer(object):
         self.summary()
         return [pad_sequences(docs_seq, maxlen=self.max_len), np.stack([np.array(doc_len), np.array(doc_ulen)], axis=-1)]
     
-    def transform_texts(self, texts):
+    def transform_docs(self, docs):
         doc_len = []
         doc_ulen = []
         docs_seq = []
 
-        docs = Parallel(n_jobs=self.cpu_cores)(delayed(self.tokenize_fun)(text) for text in texts)
         for doc in docs:
             doc_len.append(len(doc))
             doc_ulen.append(len(set(doc)))

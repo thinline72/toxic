@@ -55,7 +55,7 @@ def getModel1(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout
     return Model(inputs=x_input, outputs=x_output)
 
 def getModel2(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout=0.5,
-                attention=0, dense=False, emb_trainable=False):
+              attention=0, dense=False, emb_trainable=False):
 
     x_input = Input(shape=(input_shape,))
     

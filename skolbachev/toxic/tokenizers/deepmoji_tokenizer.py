@@ -140,7 +140,7 @@ RE_PATTERN = re.compile(r'|'.join(IGNORED) + r'|(' + r'|'.join(TOKENS) + r')',
                         re.UNICODE)
 
 
-def tokenize(text, vocab=None, lower=False, strip=False, lemmatize=False):
+def tokenize(text, vocab=None, lower=True, strip=True, lemmatize=True):
     '''Splits given input string into a list of tokens.
 
     # Arguments:

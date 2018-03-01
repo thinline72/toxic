@@ -6,7 +6,7 @@ parser.add_argument('-model', '--model_name', metavar='model_name')
 parser.add_argument('-emb', '--embs_name', metavar='embs_name')
 parser.add_argument('-k', '--num_folds', metavar='num_folds', type=int, default=10)
     
-# TODO refactor
+# TODO should be changed
 def predict_kfold_emb_models(model_name, embs_name, num_folds, seed=seed):
     ids, comments, Y, test_ids, test_comments, inx2label, label2inx = load_data()
     

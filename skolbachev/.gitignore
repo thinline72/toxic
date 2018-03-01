@@ -1,9 +1,6 @@
-models/*.h5
-models/*.pkl
-models/stacking/*.h5
-models/stacking/*.pkl
-results/*.csv
-results/*.npy
+data/*
+models/*
+results/*
 buff/
 __pycache__/
 .ipynb_checkpoints/

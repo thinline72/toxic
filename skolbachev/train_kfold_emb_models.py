@@ -15,32 +15,29 @@ parser.add_argument('-str_b', '--stratified_batches', metavar='stratified_batche
 parser.add_argument('-bs', '--batch_size', metavar='batch_size', type=int, default=256)
 parser.add_argument('-max_len', '--max_len', metavar='max_len', type=int, default=460)
 
-def tokenize(text):
-    return deepmoji_tokenizer.tokenize(text, vocab=word2inx, lower=True, strip=True, lemmatize=True)
-
 def train_kfold_emb_models(model_fun, model_name, embs_name, emb_dropout, stratified_batches, 
                            init_fold, num_folds, epochs, add_epochs, batch_size, max_len, seed=seed):
+
+    os.makedirs(models_dir+model_name, exist_ok=True)
+    
     # Load and preprocess data
     ids, comments, Y, test_ids, test_comments, inx2label, label2inx = load_data()
     Y_wblank = np.concatenate([Y, np.expand_dims((~Y.any(axis=1)).astype(int), 1)], axis=1)
-    print("Original:\n" + comments[0])
-    print()
-
-    comments = Parallel(n_jobs=cpu_cores)(delayed(preprocess)(text, False) for text in comments)
-    test_comments = Parallel(n_jobs=cpu_cores)(delayed(preprocess)(text, False) for text in test_comments)
-    print("Processed:\n" + comments[0])
     
     vectors, inx2word, word2inx = load_embs(embs_name=embs_name)
-    text_analyzer = TextAnalyzer(tokenize, word2inx, vectors, max_len=max_len,
-                                 process_oov_words=True, oov_min_doc_hits=5, cpu_cores=cpu_cores)
-    seq, meta = text_analyzer.fit_on_texts(comments + test_comments)
+    text_analyzer = TextAnalyzer(word2inx, vectors, max_len=max_len, process_oov_words=True, oov_min_doc_hits=5)
+
+    docs = pickle.load(open('data/tokenized_comments.pkl', 'rb'))
+    seq, meta = text_analyzer.fit_on_docs(docs)
     
-    pickle.dump(text_analyzer.emb_vectors, open(models_dir+model_name+'_emb_vectors.pkl', 'wb'))
-    pickle.dump(text_analyzer.emb2inx, open(models_dir+model_name+'_emb2inx.pkl', 'wb'))
-    pickle.dump(text_analyzer.inx2emb, open(models_dir+model_name+'_inx2emb.pkl', 'wb'))
+    np.save(models_dir+model_name+"/emb_vectors.npy", text_analyzer.emb_vectors)
+    pickle.dump(text_analyzer.emb2inx, open(models_dir+model_name+'/emb2inx.pkl', 'wb'))
+    pickle.dump(text_analyzer.inx2emb, open(models_dir+model_name+'/inx2emb.pkl', 'wb'))
     
     X = seq[:len(comments)]
     test_X = seq[len(comments):]
+    np.save(models_dir+model_name+"/X.npy", X)
+    np.save(models_dir+model_name+"/test_X.npy", test_X)
 
     meta_mean = meta.mean(axis=0)
     meta_std = meta.std(axis=0)
@@ -52,6 +49,8 @@ def train_kfold_emb_models(model_fun, model_name, embs_name, emb_dropout, strati
 
     X_meta = meta[:len(comments)]
     test_X_meta = meta[len(comments):]
+    np.save(models_dir+model_name+"/X_meta.npy", X_meta)
+    np.save(models_dir+model_name+"/test_X_meta.npy", test_X_meta)
     
 
     # Splitting
@@ -67,8 +66,7 @@ def train_kfold_emb_models(model_fun, model_name, embs_name, emb_dropout, strati
         model = model_fun(input_shape=X.shape[1], classes=Y.shape[1], num_words=len(text_analyzer.inx2emb), 
                           emb_size=text_analyzer.emb_size, emb_matrix=text_analyzer.emb_vectors, emb_dropout=emb_dropout,
                           attention=0, dense=False, emb_trainable=False)
-        model_file_name = model_name+"_f"+str(f_inx)
-        model_file = models_dir+model_file_name+'.h5'
+        model_file = models_dir+model_name+"/fold_"+str(f_inx)+".h5"
 
         # Train and valid seq
         if stratified_batches: trn_seq = StratifiedFeatureSequence(X[trn_folds[f_inx]], Y[trn_folds[f_inx]], batch_size)
@@ -83,7 +81,7 @@ def train_kfold_emb_models(model_fun, model_name, embs_name, emb_dropout, strati
         clr = CyclicLR(base_lr=0.0001, max_lr=0.003, step_size=2*len(trn_seq), mode='triangular2')
         
         print("Training "+model_name+" ...")
-        model.compile(loss="binary_crossentropy", optimizer=optimizers.RMSprop())
+        model.compile(loss="binary_crossentropy", optimizer=optimizers.Nadam())
         model.fit_generator(
             generator=trn_seq, steps_per_epoch=len(trn_seq),
             validation_data=val_seq, validation_steps=len(val_seq),
@@ -121,8 +119,8 @@ def train_kfold_emb_models(model_fun, model_name, embs_name, emb_dropout, strati
         print("ROC AUC: {}".format(metrics.roc_auc_score(Y[val_folds[f_inx]], pred[val_folds[f_inx]])))
         print()
 
-    np.save(results_dir+model_name+"_pred.npy", pred)
-    np.save(results_dir+model_name+"_test_pred.npy", test_pred)
+    np.save(models_dir+model_name+"/X_pred.npy", pred)
+    np.save(models_dir+model_name+"/test_X_pred.npy", test_pred)
 
     losses = compute_losses(Y, pred, eps=1e-5)
     print("full loss: {}".format(sum(losses)/len(losses)))
