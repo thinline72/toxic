@@ -100,7 +100,7 @@ def train_kfold_emb_models(model_fun, model_name, embs_name, emb_dropout, strati
         model.fit_generator(
             generator=trn_seq, steps_per_epoch=len(trn_seq),
             validation_data=val_seq, validation_steps=len(val_seq),
-            initial_epoch=epochs, epochs=epochs+add_epochs, shuffle=False, verbose=1,
+            initial_epoch=epochs, epochs=epochs+add_epochs, shuffle=False, verbose=2,
             callbacks=[model_checkpoint, clr, early_stop, roc_auc_eval],
             use_multiprocessing=False, workers=cpu_cores, max_queue_size=8*cpu_cores)
         

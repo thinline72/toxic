@@ -1,13 +1,14 @@
 **TODO list**
-- Better preprocessing
+- FIX TOKENIZATION MULTITHREADING IN SCRIPT
 - https://www.kaggle.com/jdpaletto/glove-global-vectors-for-word-representation/data (twitter embeddings)
-- https://github.com/PavelOstyakov/toxic/tree/master/tools (augmentation)
-- https://blog.openai.com/unsupervised-sentiment-neuron/
+- https://gist.github.com/cbaziotis/7ef97ccf71cbc14366835198c09809d2
+- https://github.com/richliao/textClassifier/blob/master/textClassifierHATT.py
+- https://github.com/thundergolfer/Insults
 - BPE
+- https://blog.openai.com/unsupervised-sentiment-neuron/
 - https://github.com/Donskov7/toxic_comments/blob/master/data/correct_words.csv
 - https://www.kaggle.com/nicapotato/bad-bad-words
 - https://github.com/hannw/nlstm
-- https://github.com/thundergolfer/Insults
 
 **External data**
 - https://conversationai.github.io/ | https://www.kaggle.com/eoveson/conversationaidataset (annotated)
