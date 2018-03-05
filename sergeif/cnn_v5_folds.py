@@ -196,7 +196,7 @@ def get_model_cnn(X_train):
     c4 = MaxPooling1D(maxlen-5+1)(c4)
 
     x = Concatenate(axis=1)([c2,c3,c4])
-    x = Conv1D(128, 3, activation="tanh")(x)
+    x = Conv1D(128, 3, activation="relu")(x)
     x = GlobalMaxPool1D()(x)
     x = Dropout(0.3)(x)
     #fc1 = Dropout(0.4)(Dense(128, activation='relu', kernel_initializer='he_normal')(x))
