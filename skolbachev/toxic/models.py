@@ -9,15 +9,20 @@ from keras.regularizers import *
 from .attentions import *
 
 def getModel0(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout=0.5,
-              attention=0, dense=False, emb_trainable=False):
+              attention=0, dense=False, emb_trainable=False, gru=True):
 
     x_input = Input(shape=(input_shape,))
     
     emb = Embedding(num_words, emb_size, weights=[emb_matrix], trainable=emb_trainable, name='embs')(x_input)
     emb = SpatialDropout1D(emb_dropout)(emb)
-        
-    rnn1 = Bidirectional(CuDNNGRU(64, return_sequences=True))(emb)
-    rnn2 = Bidirectional(CuDNNGRU(64, return_sequences=True))(rnn1)
+    
+    if gru:
+        rnn1 = Bidirectional(CuDNNGRU(64, return_sequences=True))(emb)
+        rnn2 = Bidirectional(CuDNNGRU(64, return_sequences=True))(rnn1)
+    else:
+        rnn1 = Bidirectional(CuDNNLSTM(64, return_sequences=True))(emb)
+        rnn2 = Bidirectional(CuDNNLSTM(64, return_sequences=True))(rnn1)
+
     x = concatenate([rnn1, rnn2])
 
     if attention == 1: x = AttentionWeightedAverage()(x)
@@ -32,14 +37,17 @@ def getModel0(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout
     return Model(inputs=x_input, outputs=x_output)
 
 def getModel1(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout=0.5,
-              attention=0, dense=False, emb_trainable=False):
+              attention=0, dense=False, emb_trainable=False, gru=True):
 
     x_input = Input(shape=(input_shape,))
     
     emb = Embedding(num_words, emb_size, weights=[emb_matrix], trainable=emb_trainable, name='embs')(x_input)
     emb = SpatialDropout1D(emb_dropout)(emb)
         
-    rnn, rnn_fw, rnn_bw = Bidirectional(CuDNNGRU(100, return_sequences=True, return_state=True))(emb)
+    if gru:
+        rnn, rnn_fw, rnn_bw = Bidirectional(CuDNNGRU(100, return_sequences=True, return_state=True))(emb)
+    else:
+        rnn, rnn_fw, rnn_bw = Bidirectional(CuDNNLSTM(100, return_sequences=True, return_state=True))(emb)
     
     rnn_max = GlobalMaxPool1D()(rnn)
     rnn_avg = GlobalAvgPool1D()(rnn)
@@ -55,15 +63,18 @@ def getModel1(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout
     return Model(inputs=x_input, outputs=x_output)
 
 def getModel2(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout=0.5,
-              attention=0, dense=False, emb_trainable=False):
+              attention=0, dense=False, emb_trainable=False, gru=True):
 
     x_input = Input(shape=(input_shape,))
     
     emb = Embedding(num_words, emb_size, weights=[emb_matrix], trainable=emb_trainable, name='embs')(x_input)
     emb = SpatialDropout1D(emb_dropout)(emb)
         
-    rnn = Bidirectional(CuDNNGRU(75, return_sequences=True))(emb)
-    
+    if gru:
+        rnn = Bidirectional(CuDNNGRU(75, return_sequences=True))(emb)
+    else:
+        rnn = Bidirectional(CuDNNLSTM(75, return_sequences=True))(emb)
+        
     cnn1 = Conv1D(filters=50, kernel_size=3, activation='relu', padding='same')(rnn)
     cnn2 = Conv1D(filters=50, kernel_size=4, activation='relu', padding='same')(rnn)
     cnn3 = Conv1D(filters=50, kernel_size=5, activation='relu', padding='same')(rnn)
@@ -82,15 +93,20 @@ def getModel2(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout
     return Model(inputs=x_input, outputs=x_output)
 
 def getModel3(input_shape, classes, num_words, emb_size, emb_matrix, emb_dropout=0.5,
-              attention=0, dense=False, emb_trainable=False):
+              attention=0, dense=False, emb_trainable=False, gru=True):
 
     x_input = Input(shape=(input_shape,))
     
     emb = Embedding(num_words, emb_size, weights=[emb_matrix], trainable=emb_trainable, name='embs')(x_input)
     emb = SpatialDropout1D(emb_dropout)(emb)
     
-    rnn1 = Bidirectional(CuDNNGRU(64, return_sequences=True))(emb)
-    rnn2 = Bidirectional(CuDNNGRU(64, return_sequences=False))(rnn1)
+    if gru:
+        rnn1 = Bidirectional(CuDNNGRU(64, return_sequences=True))(emb)
+        rnn2 = Bidirectional(CuDNNGRU(64, return_sequences=False))(rnn1)
+    else:
+        rnn1 = Bidirectional(CuDNNLSTM(64, return_sequences=True))(emb)
+        rnn2 = Bidirectional(CuDNNLSTM(64, return_sequences=False))(rnn1)
+    
     x = rnn2
     
     if dense: 

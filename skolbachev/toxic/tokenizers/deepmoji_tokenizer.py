@@ -140,7 +140,7 @@ RE_PATTERN = re.compile(r'|'.join(IGNORED) + r'|(' + r'|'.join(TOKENS) + r')',
                         re.UNICODE)
 
 
-def tokenize(text, vocab=None, lower=True, strip=True, lemmatize=True):
+def tokenize(text, vocab=None, strip=True, lemmatize=True, lower=True):
     '''Splits given input string into a list of tokens.
 
     # Arguments:
@@ -151,10 +151,10 @@ def tokenize(text, vocab=None, lower=True, strip=True, lemmatize=True):
     '''
     
     tokens = nltk.word_tokenize(" ".join(RE_PATTERN.findall(text)))
-    if lower:
-        tokens = [token.lower() for token in tokens]
+#     if lower:
+#         tokens = [token.lower() for token in tokens]
     
-    if vocab is not None and (strip or lemmatize):
+    if vocab is not None and (strip or lemmatize or lower):
         new_tokens = []
         for token in tokens:
             new_token = token
@@ -164,6 +164,10 @@ def tokenize(text, vocab=None, lower=True, strip=True, lemmatize=True):
                     new_token = re.sub(r'(.)\1{1,}', r'\1', new_token)
             if lemmatize and new_token not in vocab:
                 new_token = nltk.stem.WordNetLemmatizer().lemmatize(new_token)
+            if lower and new_token not in vocab:
+                new_token = new_token.lower()
+            if new_token == "n't":
+                new_token = "not"
             new_tokens.append(new_token)
         
         tokens = new_tokens

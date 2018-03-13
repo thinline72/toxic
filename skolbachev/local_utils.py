@@ -22,7 +22,7 @@ from toxic.utils.post_processing_utils import *
 from toxic.utils.sampling_utils import *
 from toxic.tokenizers import nltk_tokenizers, spacy_tokenizers, deepmoji_tokenizer, glove_twitter_tokenizer
 
-data_dir = '/src/DL/commons/toxic/'
+data_dir = 'data/'
 models_dir = 'models/'
 results_dir = 'results/'
 stacking_dir = models_dir+'stacking/'
@@ -42,15 +42,22 @@ def lr_change(i, lr):
             return lr*0.95
 
 def preprocess(text, lower=False):
-    text = re.sub("\t|\n", " ", re.sub("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", " ", unidecode.unidecode(text)))
+    text = re.sub("[§@#\$%^&\*:;\"\-_\<\>\\/`]", "", 
+                  re.sub("[\t\n]", " ", 
+                         re.sub("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}", " ", 
+                                unidecode.unidecode(text))))
     if lower:
         text = text.lower()
     
     return text
 
-def load_data():
-    df = pd.read_csv(data_dir + 'train.csv', index_col='id', encoding='utf-8')
-    test_df = pd.read_csv(data_dir + 'test.csv', index_col='id', encoding='utf-8')
+def load_data(cleaned=False):
+    if cleaned:
+        df = pd.read_csv(data_dir + 'train_cleaned.csv', index_col='id', encoding='utf-8')
+        test_df = pd.read_csv(data_dir + 'test_cleaned.csv', index_col='id', encoding='utf-8')
+    else:
+        df = pd.read_csv(data_dir + 'train.csv', index_col='id', encoding='utf-8')
+        test_df = pd.read_csv(data_dir + 'test.csv', index_col='id', encoding='utf-8')
 
     inx2label = ["toxic", "severe_toxic", "obscene", "threat", "insult", "identity_hate"]
     label2inx = {col: i for i, col in enumerate(inx2label)}
@@ -65,8 +72,8 @@ def load_data():
     return ids, comments, Y, test_ids, test_comments, inx2label, label2inx
 
 def load_augmented_data():
-    comments_fr = pickle.load(open('augmented/comments_fr.pkl', 'rb'))
-    comments_de = pickle.load(open('augmented/comments_de.pkl', 'rb'))
-    comments_es = pickle.load(open('augmented/comments_es.pkl', 'rb'))
+    comments_fr = pickle.load(open('data/comments_fr.pkl', 'rb'))
+    comments_de = pickle.load(open('data/comments_de.pkl', 'rb'))
+    comments_es = pickle.load(open('data/comments_es.pkl', 'rb'))
     
     return comments_fr, comments_de, comments_es

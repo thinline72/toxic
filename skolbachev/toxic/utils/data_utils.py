@@ -44,7 +44,66 @@ def load_embs(embs_dir='/src/DL/commons/word_embeddings/', embs_name='crawl-300d
     word2inx = {word: inx for inx, word in enumerate(inx2word)}
     
     return vectors, inx2word, word2inx
+    
+class FeatureSequence(Sequence):
+    
+    def __init__(self, X, Y, batch_size, shuffle=False):
+        
+        self.X, self.Y = X, Y
+        self.batch_size = batch_size
+        
+        self.inx = np.arange(0, self.Y.shape[0])
+        self.shuffle = shuffle
+        if self.shuffle:
+            np.random.shuffle(self.inx)
 
+    def __len__(self):
+        return math.ceil(self.inx.shape[0] / self.batch_size)
+
+    def __getitem__(self, i):
+        batch_inx = self.inx[i*self.batch_size:(i+1)*self.batch_size]
+        
+        return self.X[batch_inx], self.Y[batch_inx]
+    
+    def on_epoch_end(self):
+        if self.shuffle:
+            np.random.shuffle(self.inx)
+        
+class PseudoFeatureSequence(Sequence):
+    
+    def __init__(self, X, Y, batch_size, 
+                 test_X, test_X_meta, test_Y, test_batch_size,
+                 shuffle=False):
+        
+        self.X, self.Y = X, Y
+        self.batch_size = batch_size
+        self.inx = np.arange(0, self.Y.shape[0])
+        
+        self.test_X, self.test_X_meta, self.test_Y = test_X, test_X_meta, test_Y
+        self.test_batch_size = test_batch_size
+        self.test_inx = np.arange(0, self.test_Y.shape[0])
+        
+        self.shuffle = shuffle
+        if self.shuffle:
+            np.random.shuffle(self.inx)
+            np.random.shuffle(self.test_inx)
+
+    def __len__(self):
+        return math.ceil(self.inx.shape[0] / self.batch_size)
+
+    def __getitem__(self, i):
+        batch_inx = self.inx[i*self.batch_size:(i+1)*self.batch_size]
+        test_batch_inx = self.test_inx[i*self.test_batch_size:(i+1)*self.test_batch_size]
+        
+        return (np.concatenate([self.X[batch_inx], self.test_X[test_batch_inx]]), 
+                np.concatenate([self.Y[batch_inx], self.test_Y[test_batch_inx]]))
+    
+    def on_epoch_end(self):
+        if self.shuffle:
+            np.random.shuffle(self.inx)
+            np.random.shuffle(self.test_inx)
+            
+            
 class StratifiedFeatureSequence(Sequence):
     
     def __init__(self, X, Y, batch_size, seed=random.randint(0, 1e6)):
@@ -63,7 +122,7 @@ class StratifiedFeatureSequence(Sequence):
     def on_epoch_end(self):
         pass
     
-class FeatureSequence(Sequence):
+class FeatureMetaSequence(Sequence):
     
     def __init__(self, X, X_meta, Y, batch_size, shuffle=False):
         
@@ -81,13 +140,13 @@ class FeatureSequence(Sequence):
     def __getitem__(self, i):
         batch_inx = self.inx[i*self.batch_size:(i+1)*self.batch_size]
         
-        return [self.X[batch_inx], self.X_meta[batch_inx]][0], self.Y[batch_inx]
+        return [self.X[batch_inx], self.X_meta[batch_inx]], self.Y[batch_inx]
     
     def on_epoch_end(self):
         if self.shuffle:
             np.random.shuffle(self.inx)
         
-class PseudoFeatureSequence(Sequence):
+class PseudoFeatureMetaSequence(Sequence):
     
     def __init__(self, X, X_meta, Y, batch_size, 
                  test_X, test_X_meta, test_Y, test_batch_size,
@@ -114,7 +173,7 @@ class PseudoFeatureSequence(Sequence):
         test_batch_inx = self.test_inx[i*self.test_batch_size:(i+1)*self.test_batch_size]
         
         return ([np.concatenate([self.X[batch_inx], self.test_X[test_batch_inx]]),
-                 np.concatenate([self.X_meta[batch_inx], self.test_X_meta[test_batch_inx]])][0],
+                 np.concatenate([self.X_meta[batch_inx], self.test_X_meta[test_batch_inx]])],
                 np.concatenate([self.Y[batch_inx], self.test_Y[test_batch_inx]]))
     
     def on_epoch_end(self):

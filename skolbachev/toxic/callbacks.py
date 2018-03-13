@@ -4,17 +4,19 @@ from keras.callbacks import *
 from .metrics import mean_column_wise_auc
 
 class RocAucEvaluation(Callback):
-    def __init__(self, X_val, y_val, batch_size, interval=1):
+    def __init__(self, X, y, batch_size, name="val", interval=1):
         super(Callback, self).__init__()
 
-        self.X_val, self.y_val = X_val, y_val
+        self.X, self.y = X, y
         self.batch_size = batch_size
+        self.name = name
         self.interval = interval
 
     def on_epoch_end(self, epoch, logs={}):
         if epoch % self.interval == 0:
-            y_pred = self.model.predict(self.X_val, batch_size=self.batch_size, verbose=0)
-            score = mean_column_wise_auc(self.y_val, y_pred)
+            y_pred = self.model.predict(self.X, batch_size=self.batch_size, verbose=0)
+            score = mean_column_wise_auc(self.y, y_pred)
+            logs[self.name+"_auc"] = mse
             print("ROC-AUC: {:.8f}\n\n".format(score))
 
 

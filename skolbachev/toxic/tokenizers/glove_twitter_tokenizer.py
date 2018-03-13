@@ -1,23 +1,10 @@
 from __future__ import absolute_import
 
 import sys
+import regex as re
 import nltk
-import regex
 
-"""
-preprocess-twitter.py from https://gist.github.com/ppope/0ff9fa359fb850ecf74d061f3072633a
-
-python preprocess-twitter.py "Some random text with #hashtags, @mentions and http://t.co/kdjfkdjf (links). :)"
-
-Script for preprocessing tweets by Romain Paulus
-with small modifications by Jeffrey Pennington
-with translation to Python by Motoki Wu
-
-Translation of Ruby script to create features for GloVe vectors for Twitter data.
-http://nlp.stanford.edu/projects/glove/preprocess-twitter.rb
-"""
-
-FLAGS = regex.MULTILINE | regex.DOTALL
+FLAGS = re.MULTILINE | re.DOTALL
 
 def hashtag(text):
     text = text.group()
@@ -25,38 +12,47 @@ def hashtag(text):
     if hashtag_body.isupper():
         result = " {} ".format(hashtag_body.lower())
     else:
-        result = " ".join([" _1_hashtag_2_ "] + regex.split(r"(?=[A-Z])", hashtag_body, flags=FLAGS))
+        result = " ".join(["<hashtag>"] + re.split(r"(?=[A-Z])", hashtag_body, flags=FLAGS))
     return result
 
 def allcaps(text):
     text = text.group()
-    return text.lower() + " _1_allcaps_2_ "
+    return text.lower() + ' <allcaps>'
 
-
-def tokenize(text):
+def tokenize(text, vocab=None, lower=True, strip=True, lemmatize=True):
     # Different regex parts for smiley faces
     eyes = r"[8:=;]"
     nose = r"['`\-]?"
+    text = re.sub(r"https?:\/\/\S+\b|www\.(\w+\.)+\S*", "<url>", text, flags=FLAGS)
+    text = re.sub(r"@\w+", "<user>", text, flags=FLAGS)
+    text = re.sub(r"{}{}[)dD]+|[)dD]+{}{}".format(eyes, nose, nose, eyes), "<smile>", text, flags=FLAGS)
+    text = re.sub(r"{}{}p+".format(eyes, nose), "<lolface>", text, flags=FLAGS)
+    text = re.sub(r"{}{}\(+|\)+{}{}".format(eyes, nose, nose, eyes), "<sadface>", text, flags=FLAGS)
+    text = re.sub(r"{}{}[\/|l*]".format(eyes, nose), "<neutralface>", text, flags=FLAGS)
+    text = re.sub(r"/"," / ", text, flags=FLAGS)
+    text = re.sub(r"<3","<heart>", text, flags=FLAGS)
+    text = re.sub(r"[-+]?[.\d]*[\d]+[:,.\d]*", "<number>", text, flags=FLAGS)
+    text = re.sub(r"#\S+", hashtag, text, flags=FLAGS)
+    text = re.sub(r"([!?.]){2,}", r"\1 <repeat>", text, flags=FLAGS)
+    text = re.sub(r"\b(\S*?)(.)\2{2,}\b", r"\1\2 <elong>", text, flags=FLAGS)
+    text = re.sub(r"([A-Z]){2,}", allcaps, text, flags=FLAGS)
 
-    # function so code less repetitive
-    def re_sub(pattern, repl):
-        return regex.sub(pattern, repl, text, flags=FLAGS)
-
-    text = re_sub(r"https?:\/\/\S+\b|www\.(\w+\.)+\S*", " _1_url_2_ ")
-    text = re_sub(r"@\w+", " _1_user_2_ ")
-    text = re_sub(r"{}{}[)dD]+|[)dD]+{}{}".format(eyes, nose, nose, eyes), " _1_smile_2_ ")
-    text = re_sub(r"{}{}p+".format(eyes, nose), " _1_lolface_2_ ")
-    text = re_sub(r"{}{}\(+|\)+{}{}".format(eyes, nose, nose, eyes), " _1_sadface_2_ ")
-    text = re_sub(r"{}{}[\/|l*]".format(eyes, nose), " _1_neutralface_2_ ")
-    text = re_sub(r"/"," / ")
-    text = re_sub(r"<3"," _1_heart_2_ ")
-    text = re_sub(r"[-+]?[.\d]*[\d]+[:,.\d]*", " _1_number_2_ ")
-    text = re_sub(r"#\S+", hashtag)
-    text = re_sub(r"([!?.]){2,}", r"\1  <repeat> ")
-    text = re_sub(r"\b(\S*?)(.)\2{2,}\b", r"\1\2  _1_elong_2_ ")
-
-    ## -- I just don't understand why the Ruby script adds <allcaps> to everything so I limited the selection.
-    # text = re_sub(r"([^a-z0-9()<>'`\-]){2,}", allcaps)
-    text = re_sub(r"([A-Z]){2,}", allcaps)
-
-    return [token.replace('_1_', '<').replace('_2_', '>').lower() for token in nltk.word_tokenize(text)]
+    tokens = nltk.tokenize.TweetTokenizer().tokenize(text)
+    if lower:
+        tokens = [token.lower() for token in tokens]
+    
+    if vocab is not None and (strip or lemmatize):
+        new_tokens = []
+        for token in tokens:
+            new_token = token
+            if strip and new_token not in vocab:
+                new_token = re.sub(r'(.)\1{2,}', r'\1', new_token)
+                if new_token not in vocab:
+                    new_token = re.sub(r'(.)\1{1,}', r'\1', new_token)
+            if lemmatize and new_token not in vocab:
+                new_token = nltk.stem.WordNetLemmatizer().lemmatize(new_token)
+            new_tokens.append(new_token)
+        
+        tokens = new_tokens
+            
+    return tokens
