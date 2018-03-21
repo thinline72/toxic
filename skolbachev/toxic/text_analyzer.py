@@ -8,7 +8,7 @@ from keras.preprocessing.sequence import pad_sequences
 
 class TextAnalyzer(object):
     
-    def __init__(self, word2inx, vectors, max_len, 
+    def __init__(self, word2inx, vectors, max_len, reverse=False,
                  min_word_hits=1, min_doc_hits=1, max_doc_freq=1.0,
                  process_oov_words=False, oov_window=5, oov_min_doc_hits=1):
         self.word2inx = word2inx
@@ -17,6 +17,7 @@ class TextAnalyzer(object):
         self.PAD_TOKEN = "_PAD_"
         self.UNK_TOKEN = "_UNK_"
         self.max_len = max_len
+        self.reverse = reverse
 
         self.emb_size = vectors.shape[1]
         self.pad_vec = -1*np.ones(self.emb_size)
@@ -92,7 +93,10 @@ class TextAnalyzer(object):
         self.emb_vectors = np.stack(self.emb_vectors)
         
         for doc in docs:
-            docs_seq.append([self.emb2inx[w] if w in self.emb2inx else self.emb2inx[self.UNK_TOKEN] for w in doc])
+            if self.reverse:
+                docs_seq.append([self.emb2inx[w] if w in self.emb2inx else self.emb2inx[self.UNK_TOKEN] for w in doc[::-1]])
+            else:
+                docs_seq.append([self.emb2inx[w] if w in self.emb2inx else self.emb2inx[self.UNK_TOKEN] for w in doc])
             
         self.summary()
         return [pad_sequences(docs_seq, maxlen=self.max_len), np.stack([np.array(doc_len), np.array(doc_ulen)], axis=-1)]
@@ -105,7 +109,10 @@ class TextAnalyzer(object):
         for doc in docs:
             doc_len.append(len(doc))
             doc_ulen.append(len(set(doc)))
-            docs_seq.append([self.emb2inx[w] if w in self.emb2inx else self.emb2inx[self.UNK_TOKEN] for w in doc])
+            if self.reverse:
+                docs_seq.append([self.emb2inx[w] if w in self.emb2inx else self.emb2inx[self.UNK_TOKEN] for w in doc[::-1]])
+            else:
+                docs_seq.append([self.emb2inx[w] if w in self.emb2inx else self.emb2inx[self.UNK_TOKEN] for w in doc])
             
         return [pad_sequences(docs_seq, maxlen=self.max_len), np.stack([np.array(doc_len), np.array(doc_ulen)], axis=-1)]
         

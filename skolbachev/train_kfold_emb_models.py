@@ -12,13 +12,12 @@ parser.add_argument('-gru', '--gru_rnn', metavar='gru_rnn', type=int, default=1)
 parser.add_argument('-init_k', '--init_fold', metavar='init_fold', type=int, default=0)
 parser.add_argument('-k', '--num_folds', metavar='num_folds', type=int, default=10)
 parser.add_argument('-e', '--epochs', metavar='epochs', type=int, default=24)
-parser.add_argument('-ae', '--add_epochs', metavar='add_epochs', type=int, default=8)
 parser.add_argument('-str_b', '--stratified_batches', metavar='stratified_batches', type=int, default=0)
 parser.add_argument('-bs', '--batch_size', metavar='batch_size', type=int, default=256)
 parser.add_argument('-max_len', '--max_len', metavar='max_len', type=int, default=460)
 
 def train_kfold_emb_models(model_fun, model_name, tokenized_docs, embs_name, emb_dropout, gru_rnn, stratified_batches, 
-                           init_fold, num_folds, epochs, add_epochs, batch_size, max_len, seed=seed):
+                           init_fold, num_folds, epochs, batch_size, max_len, seed=seed):
 
     os.makedirs(models_dir+model_name, exist_ok=True)
     
@@ -27,7 +26,7 @@ def train_kfold_emb_models(model_fun, model_name, tokenized_docs, embs_name, emb
     Y_wblank = np.concatenate([Y, np.expand_dims((~Y.any(axis=1)).astype(int), 1)], axis=1)
     
     vectors, inx2word, word2inx = load_embs(embs_name=embs_name)
-    text_analyzer = TextAnalyzer(word2inx, vectors, max_len=max_len, process_oov_words=True, oov_min_doc_hits=5)
+    text_analyzer = TextAnalyzer(word2inx, vectors, reverse=False, max_len=max_len, process_oov_words=True, oov_min_doc_hits=5)
 
     docs = pickle.load(open('data/'+tokenized_docs+'.pkl', 'rb'))
     seq, meta = text_analyzer.fit_on_docs(docs)
@@ -76,8 +75,8 @@ def train_kfold_emb_models(model_fun, model_name, tokenized_docs, embs_name, emb
         val_seq = FeatureSequence(X[val_folds[f_inx]], Y[val_folds[f_inx]], 1024)       
 
         # Callbacks
-        model_checkpoint = ModelCheckpoint(model_file, monitor='val_loss', mode='min', verbose=1, save_best_only=True)
-        early_stop = EarlyStopping(monitor='val_loss', min_delta=0, patience=6, verbose=1, mode='auto')
+        model_checkpoint = ModelCheckpoint(model_file, monitor='val_auc', mode='max', verbose=1, save_best_only=True)
+        early_stop = EarlyStopping(monitor='val_auc', min_delta=0, patience=6, verbose=1, mode='max')
         roc_auc_eval = RocAucEvaluation(X[val_folds[f_inx]], Y[val_folds[f_inx]], batch_size=1024)
         clr = CyclicLR(base_lr=0.0001, max_lr=0.003, step_size=2*len(trn_seq), mode='triangular2')
         
@@ -87,24 +86,8 @@ def train_kfold_emb_models(model_fun, model_name, tokenized_docs, embs_name, emb
             generator=trn_seq, steps_per_epoch=len(trn_seq),
             validation_data=val_seq, validation_steps=len(val_seq),
             initial_epoch=0, epochs=epochs, shuffle=False, verbose=2,
-            callbacks=[model_checkpoint, clr, early_stop, roc_auc_eval],
+            callbacks=[roc_auc_eval, model_checkpoint, clr, early_stop],
             use_multiprocessing=False, workers=cpu_cores, max_queue_size=8*cpu_cores)
-        
-#         del model
-#         model = load_model(model_file, compile=True, 
-#                            custom_objects={'Attention':Attention, 'art_loss':art_loss,
-#                                            'AttentionWeightedAverage':AttentionWeightedAverage})
-            
-#         clr = CyclicLR(base_lr=0.0001, max_lr=0.001, step_size=2*len(trn_seq), mode='triangular2')
-#         early_stop = EarlyStopping(monitor='val_loss', min_delta=0, patience=4, verbose=1, mode='auto')
-#         model.compile(loss="binary_crossentropy", optimizer=optimizers.Adam())
-#         model.fit_generator(
-#             generator=trn_seq, steps_per_epoch=len(trn_seq),
-#             validation_data=val_seq, validation_steps=len(val_seq),
-#             initial_epoch=epochs, epochs=epochs+add_epochs, shuffle=False, verbose=2,
-#             callbacks=[model_checkpoint, clr, early_stop, roc_auc_eval],
-#             use_multiprocessing=False, workers=cpu_cores, max_queue_size=8*cpu_cores)
-        
         
         print("Predicting ...")
         del model
@@ -150,7 +133,7 @@ def main():
 
     train_kfold_emb_models(model_fun, args.model_name, args.tokenized_docs, args.embs_name, args.emb_dropout,
                            args.gru_rnn==1, args.stratified_batches==1,
-                           args.init_fold, args.num_folds, args.epochs, args.add_epochs, args.batch_size, args.max_len)
+                           args.init_fold, args.num_folds, args.epochs, args.batch_size, args.max_len)
             
 if __name__ == '__main__':
     main()

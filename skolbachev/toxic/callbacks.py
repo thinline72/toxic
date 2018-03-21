@@ -16,7 +16,7 @@ class RocAucEvaluation(Callback):
         if epoch % self.interval == 0:
             y_pred = self.model.predict(self.X, batch_size=self.batch_size, verbose=0)
             score = mean_column_wise_auc(self.y, y_pred)
-            logs[self.name+"_auc"] = mse
+            logs[self.name+"_auc"] = score
             print("ROC-AUC: {:.8f}\n\n".format(score))
 
 
