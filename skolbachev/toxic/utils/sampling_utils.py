@@ -1,5 +1,6 @@
 from __future__ import absolute_import
 
+import itertools
 import numpy as np
 import matplotlib.pyplot as plt
 from sklearn.model_selection import train_test_split, StratifiedShuffleSplit, StratifiedKFold
